@@ -21,6 +21,7 @@ export default function Home() {
 
   // Agent State
   const [agentStatuses, setAgentStatuses] = useState<Record<string, boolean>>({});
+  const [activeAgent, setActiveAgent] = useState<string>("");
 
   // Data State
   const [report, setReport] = useState<string>("");
@@ -45,20 +46,40 @@ export default function Home() {
             ...prev,
             [msg.agent!]: msg.active || false,
           }));
+          // Track which agent is currently active
+          if (msg.active) {
+            setActiveAgent(msg.agent);
+          }
         }
         break;
         
       case "agent_message":
         if (msg.content) {
-          // Check if this is a report from ReportWriter or final Orchestrator response
-          const isReport = 
-            (msg.agent === "ReportWriter" && msg.content.includes("#")) ||
-            (msg.agent === "MagenticOneOrchestrator" && 
-             msg.content.includes("##") && 
-             msg.content.length > 500);
+          console.log(`[Agent ${msg.agent}] Message length: ${msg.content.length}`);
           
-          if (isReport) {
-            setReport(msg.content);
+          // Update report with the latest substantial content
+          // Priority: ReportWriter > MagenticOneOrchestrator > any agent with long content
+          const isFromReportWriter = msg.agent === "ReportWriter";
+          const isFromOrchestrator = msg.agent === "MagenticOneOrchestrator";
+          const hasSubstantialContent = msg.content.length > 300;
+          const hasReportStructure = msg.content.includes("#") || 
+                                     msg.content.includes("---") || 
+                                     msg.content.includes("•");
+          
+          // Always update if it's a substantial message with structure
+          if (hasSubstantialContent && hasReportStructure) {
+            // Keep the longer/better report
+            setReport(prev => {
+              // ReportWriter always wins
+              if (isFromReportWriter) return msg.content;
+              // Orchestrator replaces if current is from other agent or shorter
+              if (isFromOrchestrator && msg.content.length > (prev?.length || 0)) {
+                return msg.content;
+              }
+              // Other agents only if we have nothing
+              if (!prev || prev.length < 100) return msg.content;
+              return prev;
+            });
           }
         }
         break;
@@ -82,6 +103,7 @@ export default function Home() {
         
       case "query_complete":
         setIsProcessing(false);
+        setActiveAgent("");
         // Reset all agent statuses
         setAgentStatuses({});
         break;
@@ -89,6 +111,7 @@ export default function Home() {
       case "error":
         setError(msg.error || "Unbekannter Fehler");
         setIsProcessing(false);
+        setActiveAgent("");
         break;
     }
   }, []);
@@ -164,7 +187,13 @@ export default function Home() {
               } ${isProcessing ? "animate-pulse" : ""}`}
             />
             <span className="text-xs text-slate-500">
-              {isProcessing ? "Analysiere..." : isConnected ? "Verbunden" : "Getrennt"}
+              {isProcessing && activeAgent 
+                ? `${activeAgent} arbeitet...` 
+                : isProcessing 
+                ? "Analysiere..." 
+                : isConnected 
+                ? "Verbunden" 
+                : "Getrennt"}
             </span>
           </div>
         </div>
