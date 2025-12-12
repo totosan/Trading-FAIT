@@ -8,10 +8,10 @@
 
 | Metrik | Wert |
 |--------|------|
-| **Projekt-Phase** | Planung abgeschlossen, Implementierung startet |
-| **Fortschritt** | ██░░░░░░░░ 5% |
-| **Aktuelle Phase** | Phase 0 (Planung) ✅ |
-| **Nächste Phase** | Phase 1 (Projektstruktur) |
+| **Projekt-Phase** | Phase 5 abgeschlossen |
+| **Fortschritt** | ████████████░░ 60% |
+| **Aktuelle Phase** | Phase 5 (WebSocket API) ✅ |
+| **Nächste Phase** | Phase 6-7 (Frontend Komponenten) |
 | **Blocker** | Keine |
 
 ---
@@ -21,11 +21,11 @@
 | # | Phase | Status | Fortschritt | Notizen |
 |---|-------|--------|-------------|---------|
 | 0 | Planung & Konzept | ✅ Abgeschlossen | 100% | Alle Entscheidungen getroffen |
-| 1 | Projektstruktur | 🔴 Nicht gestartet | 0% | - |
-| 2 | Backend Core | 🔴 Nicht gestartet | 0% | - |
-| 3 | Magentic-One Agenten | 🔴 Nicht gestartet | 0% | - |
-| 4 | Market-Data Services | 🔴 Nicht gestartet | 0% | - |
-| 5 | WebSocket API | 🔴 Nicht gestartet | 0% | - |
+| 1 | Projektstruktur | ✅ Abgeschlossen | 100% | Alle Ordner und Basis-Dateien erstellt |
+| 2 | Backend Core | ✅ Abgeschlossen | 100% | Config, Logging, Health-Endpoints |
+| 3 | Magentic-One Agenten | ✅ Abgeschlossen | 100% | prompts.py, termination.py, team.py |
+| 4 | Market-Data Services | ✅ Abgeschlossen | 100% | market_data.py, indicators.py |
+| 5 | WebSocket API | ✅ Abgeschlossen | 100% | websocket.py, socket.ts, page.tsx |
 | 6 | Frontend Basis | 🔴 Nicht gestartet | 0% | - |
 | 7 | Frontend Komponenten | 🔴 Nicht gestartet | 0% | - |
 | 8 | Docker-Compose | 🔴 Nicht gestartet | 0% | - |
@@ -46,39 +46,52 @@
 ### Backend-Dateien
 | Datei | Status | Beschreibung |
 |-------|--------|--------------|
-| `backend/app/main.py` | 🔴 | FastAPI App |
-| `backend/app/core/config.py` | 🔴 | Azure OpenAI Config |
-| `backend/app/core/logging.py` | 🔴 | File-Logger |
-| `backend/app/agents/team.py` | 🔴 | Agenten-Team |
-| `backend/app/agents/prompts.py` | 🔴 | System-Prompts |
-| `backend/app/agents/termination.py` | 🔴 | Konsens-Detector |
-| `backend/app/services/market_data.py` | 🔴 | Marktdaten-Service |
-| `backend/app/services/indicators.py` | 🔴 | Indikatoren |
-| `backend/app/api/websocket.py` | 🔴 | WebSocket-Handler |
-| `backend/requirements.txt` | 🔴 | Dependencies |
-| `backend/Dockerfile` | 🔴 | Container |
+| `backend/app/__init__.py` | ✅ | Package Init |
+| `backend/app/main.py` | ✅ | FastAPI App (Basis) |
+| `backend/app/api/__init__.py` | ✅ | API Package |
+| `backend/app/agents/__init__.py` | ✅ | Agents Package |
+| `backend/app/services/__init__.py` | ✅ | Services Package |
+| `backend/app/core/__init__.py` | ✅ | Core Package |
+| `backend/app/core/config.py` | ✅ | Azure OpenAI Config (Pydantic Settings) |
+| `backend/app/core/logging.py` | ✅ | structlog + DiscussionFileLogger |
+| `backend/app/agents/team.py` | ✅ | TradingAgentTeam mit MagenticOneGroupChat |
+| `backend/app/agents/prompts.py` | ✅ | System-Prompts für 6 Agenten |
+| `backend/app/agents/termination.py` | ✅ | ConsensusTracker + TradingTerminationCondition |
+| `backend/app/services/market_data.py` | ✅ | Marktdaten-Service (yfinance + ccxt) |
+| `backend/app/services/indicators.py` | ✅ | Technische Indikatoren (pandas-ta) |
+| `backend/app/api/websocket.py` | ✅ | WebSocket-Handler + ConnectionManager |
+| `backend/requirements.txt` | ✅ | Dependencies |
+| `backend/Dockerfile` | ✅ | Container |
 
 ### Frontend-Dateien
 | Datei | Status | Beschreibung |
 |-------|--------|--------------|
-| `frontend/app/page.tsx` | 🔴 | Haupt-UI |
-| `frontend/app/layout.tsx` | 🔴 | Root Layout |
-| `frontend/components/Chat.tsx` | 🔴 | Chat-Input |
-| `frontend/components/ActivityDots.tsx` | 🔴 | Agenten-Status |
+| `frontend/app/page.tsx` | ✅ | Haupt-UI mit WebSocket Integration |
+| `frontend/app/layout.tsx` | ✅ | Root Layout |
+| `frontend/app/globals.css` | ✅ | Tailwind Styles + Agent Dots Animation |
+| `frontend/lib/types.ts` | ✅ | TypeScript Types (erweitert) |
+| `frontend/components/Chat.tsx` | 🔴 | Chat-Input (in page.tsx integriert) |
+| `frontend/components/ActivityDots.tsx` | ✅ | Agenten-Status (in page.tsx integriert) |
 | `frontend/components/TradingViewWidget.tsx` | 🔴 | Chart-Widget |
 | `frontend/components/TradeCard.tsx` | 🔴 | Trade-Empfehlung |
 | `frontend/components/MarkdownReport.tsx` | 🔴 | Report-Renderer |
-| `frontend/lib/socket.ts` | 🔴 | WebSocket-Client |
-| `frontend/package.json` | 🔴 | Dependencies |
-| `frontend/Dockerfile` | 🔴 | Container |
+| `frontend/lib/socket.ts` | ✅ | WebSocket-Client (TradingSocket Klasse) |
+| `frontend/package.json` | ✅ | Dependencies |
+| `frontend/tsconfig.json` | ✅ | TypeScript Config |
+| `frontend/tailwind.config.ts` | ✅ | Tailwind Config |
+| `frontend/next.config.js` | ✅ | Next.js Config |
+| `frontend/postcss.config.js` | ✅ | PostCSS Config |
+| `frontend/Dockerfile` | ✅ | Container |
 
 ### Konfiguration
 | Datei | Status | Beschreibung |
 |-------|--------|--------------|
-| `docker-compose.yml` | 🔴 | Dev-Orchestrierung |
-| `.env.example` | 🔴 | Umgebungsvariablen |
-| `.gitignore` | 🔴 | Git-Ignore |
-| `README.md` | 🔴 | Projekt-Readme |
+| `docker-compose.yml` | ✅ | Dev-Orchestrierung |
+| `docker-compose.prod.yml` | ✅ | Prod-Orchestrierung |
+| `.env.example` | ✅ | Umgebungsvariablen |
+| `.gitignore` | ✅ | Git-Ignore (erweitert) |
+| `README.md` | ✅ | Projekt-Readme |
+| `logs/discussions/.gitkeep` | ✅ | Log-Verzeichnis |
 
 ---
 
@@ -90,21 +103,19 @@
 | 12.12.2024 | Magentic-One Recherche | Framework gewählt |
 | 12.12.2024 | UI/UX Konzept | Activity Dots definiert |
 | 12.12.2024 | Planungsdokumentation | Alle Planning-Docs erstellt |
+| 12.12.2024 | **Phase 1 abgeschlossen** | Projektstruktur, Docker, Basis-Dateien |
 
 ---
 
 ## ⏭️ Nächste Schritte
 
-1. **Phase 1 starten:** Projektstruktur anlegen
-   - Ordner erstellen
-   - `.env.example` anlegen
-   - `docker-compose.yml` Basis
-   - `.gitignore` konfigurieren
+1. **Phase 2 starten:** Backend Core implementieren
+   - `backend/app/core/config.py` - Azure OpenAI Config
+   - `backend/app/core/logging.py` - structlog File-Logger
+   - Backend testen mit `uvicorn`
 
-2. **Phase 2:** Backend Core implementieren
-   - FastAPI App
-   - Azure OpenAI Config
-   - Logging-System
+2. **Phase 3:** Magentic-One Agenten-Team
+   - `team.py`, `prompts.py`, `termination.py`
 
 ---
 

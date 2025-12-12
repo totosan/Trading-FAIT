@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Activity Dots Animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.15);
+  }
+}
+
+.agent-dot {
+  @apply w-2.5 h-2.5 rounded-full bg-slate-600 transition-all duration-300;
+}
+
+.agent-dot.active {
+  @apply bg-green-500;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Markdown Report Styles */
+.markdown-report {
+  @apply prose prose-invert prose-sm max-w-none;
+}
+
+.markdown-report h1 {
+  @apply text-xl font-bold text-white mb-4;
+}
+
+.markdown-report h2 {
+  @apply text-lg font-semibold text-slate-200 mt-6 mb-3;
+}
+
+.markdown-report table {
+  @apply w-full border-collapse my-4;
+}
+
+.markdown-report th {
+  @apply bg-slate-800 px-3 py-2 text-left text-sm font-medium text-slate-300 border border-slate-700;
+}
+
+.markdown-report td {
+  @apply px-3 py-2 text-sm text-slate-400 border border-slate-700;
+}
+
+.markdown-report code {
+  @apply bg-slate-800 px-1.5 py-0.5 rounded text-green-400 text-xs;
+}
+
+.markdown-report pre {
+  @apply bg-slate-900 p-4 rounded-lg overflow-x-auto my-4;
+}
+
+/* Trade Card Styles */
+.trade-card {
+  @apply bg-slate-800/50 border border-slate-700 rounded-lg p-4;
+}
+
+.trade-card.long {
+  @apply border-l-4 border-l-green-500;
+}
+
+.trade-card.short {
+  @apply border-l-4 border-l-red-500;
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-700 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-600;
+}
