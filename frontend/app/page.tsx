@@ -2,48 +2,30 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { connectSocket, getSocket } from "@/lib/socket";
-import { AgentName, WebSocketMessage } from "@/lib/types";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-
-interface AgentDot {
-  id: string;
-  name: AgentName;
-  active: boolean;
-}
-
-function ActivityDots({ agentStatuses }: { agentStatuses: Record<string, boolean> }) {
-  const agents: AgentDot[] = [
-    { id: "market", name: "MarketAnalyst", active: agentStatuses["MarketAnalyst"] || false },
-    { id: "news", name: "NewsResearcher", active: agentStatuses["NewsResearcher"] || false },
-    { id: "chart", name: "ChartConfigurator", active: agentStatuses["ChartConfigurator"] || false },
-    { id: "report", name: "ReportWriter", active: agentStatuses["ReportWriter"] || false },
-    { id: "indicator", name: "IndicatorCoder", active: agentStatuses["IndicatorCoder"] || false },
-    { id: "executor", name: "CodeExecutor", active: agentStatuses["CodeExecutor"] || false },
-  ];
-
-  return (
-    <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/50 rounded-lg">
-      <span className="text-xs text-slate-500 mr-2">Agenten:</span>
-      {agents.map((agent) => (
-        <div
-          key={agent.id}
-          className={`agent-dot ${agent.active ? "active" : ""}`}
-          title={agent.name}
-        />
-      ))}
-    </div>
-  );
-}
+import { WebSocketMessage, TradeRecommendation } from "@/lib/types";
+import {
+  ActivityDots,
+  TradeCard,
+  TradeCardEmpty,
+  MarkdownReport,
+  MarkdownReportLoading,
+  TradingViewWidget,
+  Chat,
+} from "@/components";
 
 export default function Home() {
-  const [message, setMessage] = useState("");
+  // Connection State
   const [isConnected, setIsConnected] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [agentStatuses, setAgentStatuses] = useState<Record<string, boolean>>({});
-  const [report, setReport] = useState<string>("");
-  const [lastAgentMessage, setLastAgentMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
+
+  // Agent State
+  const [agentStatuses, setAgentStatuses] = useState<Record<string, boolean>>({});
+
+  // Data State
+  const [report, setReport] = useState<string>("");
+  const [tradeRecommendation, setTradeRecommendation] = useState<TradeRecommendation | null>(null);
+  const [currentSymbol, setCurrentSymbol] = useState<string>("BTCUSD");
 
   // Handle incoming WebSocket messages
   const handleMessage = useCallback((msg: WebSocketMessage) => {
@@ -54,6 +36,7 @@ export default function Home() {
         setIsProcessing(true);
         setReport("");
         setError("");
+        setTradeRecommendation(null);
         break;
         
       case "agent_status":
@@ -67,11 +50,7 @@ export default function Home() {
         
       case "agent_message":
         if (msg.content) {
-          // Update last agent message (for sidebar)
-          setLastAgentMessage(msg.content.slice(0, 500));
-          
-          // Check if this is a report - from ReportWriter or final Orchestrator response
-          // Reports typically contain markdown headers (#) or structured content
+          // Check if this is a report from ReportWriter or final Orchestrator response
           const isReport = 
             (msg.agent === "ReportWriter" && msg.content.includes("#")) ||
             (msg.agent === "MagenticOneOrchestrator" && 
@@ -81,6 +60,23 @@ export default function Home() {
           if (isReport) {
             setReport(msg.content);
           }
+        }
+        break;
+      
+      case "trade_recommendation":
+        if (msg.data && "symbol" in msg.data) {
+          const trade = msg.data as TradeRecommendation;
+          setTradeRecommendation(trade);
+          // Update chart symbol
+          if (trade.symbol) {
+            setCurrentSymbol(trade.symbol);
+          }
+        }
+        break;
+
+      case "chart_config":
+        if (msg.data && "symbol" in msg.data) {
+          setCurrentSymbol(msg.data.symbol as string);
         }
         break;
         
@@ -131,14 +127,19 @@ export default function Home() {
     };
   }, [handleMessage]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Send message handler
+  const handleSendMessage = (message: string) => {
     if (!message.trim() || isProcessing) return;
     
     const socket = getSocket();
     if (socket.isConnected) {
       socket.sendQuery(message);
-      setMessage("");
+      
+      // Try to extract symbol from query for chart
+      const symbolMatch = message.match(/\b(BTC|ETH|SOL|XRP|ADA|DOGE|AAPL|MSFT|TSLA|GOOGL|NVDA)\b/i);
+      if (symbolMatch) {
+        setCurrentSymbol(symbolMatch[1].toUpperCase());
+      }
     } else {
       setError("Nicht verbunden. Bitte warten...");
     }
@@ -171,79 +172,66 @@ export default function Home() {
 
       {/* Error Banner */}
       {error && (
-        <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-300 text-sm">
-          ⚠️ {error}
+        <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-300 text-sm flex items-center justify-between">
+          <span>⚠️ {error}</span>
+          <button
+            onClick={() => setError("")}
+            className="text-red-400 hover:text-red-200"
+          >
+            ✕
+          </button>
         </div>
       )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chart Area */}
-        <div className="lg:col-span-2 bg-slate-800/30 rounded-lg p-4 min-h-[400px] flex items-center justify-center">
-          <div className="text-center text-slate-500">
-            <p className="text-lg">📈 TradingView Chart</p>
-            <p className="text-sm mt-2">Wird in Phase 7 implementiert</p>
-          </div>
+        <div className="lg:col-span-2 bg-slate-800/30 rounded-lg overflow-hidden min-h-[400px]">
+          <TradingViewWidget
+            symbol={currentSymbol}
+            interval="D"
+            theme="dark"
+            height={400}
+          />
         </div>
 
         {/* Trade Card Area */}
-        <div className="bg-slate-800/30 rounded-lg p-4">
+        <div>
           <h2 className="text-sm font-medium text-slate-400 mb-4">
             Trade Empfehlung
           </h2>
-          {lastAgentMessage ? (
-            <div className="prose prose-invert prose-sm max-w-none">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {lastAgentMessage.slice(0, 500)}
-              </ReactMarkdown>
-            </div>
+          {tradeRecommendation ? (
+            <TradeCard
+              trade={tradeRecommendation}
+              onDismiss={() => setTradeRecommendation(null)}
+            />
           ) : (
-            <div className="text-center text-slate-500 py-8">
-              <p>Keine aktive Empfehlung</p>
-              <p className="text-xs mt-2">Stelle eine Frage um zu starten</p>
-            </div>
+            <TradeCardEmpty />
           )}
         </div>
       </div>
 
       {/* Report Area */}
-      <div className="mt-6 bg-slate-800/30 rounded-lg p-4 min-h-[200px]">
-        <h2 className="text-sm font-medium text-slate-400 mb-4">
-          Analyse Report
-        </h2>
-        {report ? (
-          <div className="prose prose-invert prose-sm max-w-none">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {report.replace(/^```markdown\n?/, "").replace(/\n?```$/, "")}
-            </ReactMarkdown>
-          </div>
+      <div className="mt-6">
+        {isProcessing && !report ? (
+          <MarkdownReportLoading />
         ) : (
-          <div className="text-center text-slate-500 py-8">
-            <p>{isProcessing ? "Agenten analysieren..." : "Kein Report verfügbar"}</p>
-          </div>
+          <MarkdownReport
+            content={report}
+            title="Analyse Report"
+            collapsible={report.length > 1000}
+          />
         )}
       </div>
 
       {/* Chat Input */}
-      <form onSubmit={handleSubmit} className="mt-6">
-        <div className="flex gap-3">
-          <input
-            type="text"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Deine Frage hier eingeben... z.B. 'Analysiere BTC für Swing-Trade'"
-            className="flex-1 px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50"
-            disabled={isProcessing}
-          />
-          <button
-            type="submit"
-            disabled={isProcessing || !isConnected}
-            className="px-6 py-3 bg-green-600 hover:bg-green-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
-          >
-            {isProcessing ? "..." : "Senden"}
-          </button>
-        </div>
-      </form>
+      <div className="mt-6">
+        <Chat
+          onSendMessage={handleSendMessage}
+          isConnected={isConnected}
+          isProcessing={isProcessing}
+        />
+      </div>
 
       {/* Footer */}
       <footer className="mt-8 text-center text-xs text-slate-600">

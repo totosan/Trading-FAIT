@@ -1,6 +1,6 @@
 # Trading-FAIT Status Report
 
-> **Letzte Aktualisierung:** 12.12.2024 | **Version:** 1.0
+> **Letzte Aktualisierung:** 12.12.2024 | **Version:** 1.1
 
 ---
 
@@ -8,10 +8,10 @@
 
 | Metrik | Wert |
 |--------|------|
-| **Projekt-Phase** | Phase 5 abgeschlossen |
-| **Fortschritt** | ████████████░░ 60% |
-| **Aktuelle Phase** | Phase 5 (WebSocket API) ✅ |
-| **Nächste Phase** | Phase 6-7 (Frontend Komponenten) |
+| **Projekt-Phase** | Phase 6-7 abgeschlossen |
+| **Fortschritt** | ██████████████░░ 80% |
+| **Aktuelle Phase** | Phase 6-7 (Frontend Komponenten) ✅ |
+| **Nächste Phase** | Phase 8-9 (Docker & Testing) |
 | **Blocker** | Keine |
 
 ---
@@ -26,8 +26,8 @@
 | 3 | Magentic-One Agenten | ✅ Abgeschlossen | 100% | prompts.py, termination.py, team.py |
 | 4 | Market-Data Services | ✅ Abgeschlossen | 100% | market_data.py, indicators.py |
 | 5 | WebSocket API | ✅ Abgeschlossen | 100% | websocket.py, socket.ts, page.tsx |
-| 6 | Frontend Basis | 🔴 Nicht gestartet | 0% | - |
-| 7 | Frontend Komponenten | 🔴 Nicht gestartet | 0% | - |
+| 6 | Frontend Basis | ✅ Abgeschlossen | 100% | Komponenten-Struktur, Barrel Exports |
+| 7 | Frontend Komponenten | ✅ Abgeschlossen | 100% | ActivityDots, TradeCard, MarkdownReport, TradingViewWidget, Chat |
 | 8 | Docker-Compose | 🔴 Nicht gestartet | 0% | - |
 | 9 | Testing | 🔴 Nicht gestartet | 0% | - |
 
@@ -70,11 +70,12 @@
 | `frontend/app/layout.tsx` | ✅ | Root Layout |
 | `frontend/app/globals.css` | ✅ | Tailwind Styles + Agent Dots Animation |
 | `frontend/lib/types.ts` | ✅ | TypeScript Types (erweitert) |
-| `frontend/components/Chat.tsx` | 🔴 | Chat-Input (in page.tsx integriert) |
-| `frontend/components/ActivityDots.tsx` | ✅ | Agenten-Status (in page.tsx integriert) |
-| `frontend/components/TradingViewWidget.tsx` | 🔴 | Chart-Widget |
-| `frontend/components/TradeCard.tsx` | 🔴 | Trade-Empfehlung |
-| `frontend/components/MarkdownReport.tsx` | 🔴 | Report-Renderer |
+| `frontend/components/Chat.tsx` | ✅ | Chat-Input mit Quick Actions |
+| `frontend/components/ActivityDots.tsx` | ✅ | Agenten-Status mit Tooltips |
+| `frontend/components/TradingViewWidget.tsx` | ✅ | TradingView Free Chart-Widget |
+| `frontend/components/TradeCard.tsx` | ✅ | Trade-Empfehlung mit Entry/SL/TP |
+| `frontend/components/MarkdownReport.tsx` | ✅ | Report-Renderer mit Copy-Funktion |
+| `frontend/components/index.ts` | ✅ | Barrel Export für alle Komponenten |
 | `frontend/lib/socket.ts` | ✅ | WebSocket-Client (TradingSocket Klasse) |
 | `frontend/package.json` | ✅ | Dependencies |
 | `frontend/tsconfig.json` | ✅ | TypeScript Config |
@@ -104,18 +105,20 @@
 | 12.12.2024 | UI/UX Konzept | Activity Dots definiert |
 | 12.12.2024 | Planungsdokumentation | Alle Planning-Docs erstellt |
 | 12.12.2024 | **Phase 1 abgeschlossen** | Projektstruktur, Docker, Basis-Dateien |
+| 12.12.2024 | **Phase 2-5 abgeschlossen** | Backend Core, Agenten, Services, WebSocket |
+| 12.12.2024 | **Phase 6-7 abgeschlossen** | Alle Frontend-Komponenten erstellt |
 
 ---
 
 ## ⏭️ Nächste Schritte
 
-1. **Phase 2 starten:** Backend Core implementieren
-   - `backend/app/core/config.py` - Azure OpenAI Config
-   - `backend/app/core/logging.py` - structlog File-Logger
-   - Backend testen mit `uvicorn`
+1. **Phase 8 starten:** Docker-Compose Integration testen
+   - `docker-compose up --build` validieren
+   - Port-Forwarding für Codespaces prüfen
 
-2. **Phase 3:** Magentic-One Agenten-Team
-   - `team.py`, `prompts.py`, `termination.py`
+2. **Phase 9:** Testing
+   - End-to-End Tests schreiben
+   - Agent-Team Integration testen
 
 ---
 
