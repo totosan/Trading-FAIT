@@ -7,7 +7,7 @@ const nextConfig = {
     return [
       {
         source: '/ws/:path*',
-        destination: 'http://backend:8000/ws/:path*',
+        destination: 'http://backend:8001/ws/:path*',
       },
     ];
   },

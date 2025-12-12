@@ -6,3 +6,4 @@ export { TradeCard, TradeCardEmpty } from "./TradeCard";
 export { MarkdownReport, MarkdownReportLoading } from "./MarkdownReport";
 export { TradingViewWidget, TradingViewMiniChart } from "./TradingViewWidget";
 export { Chat } from "./Chat";
+export { default as LightweightChart } from "./LightweightChart";

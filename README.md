@@ -51,7 +51,7 @@ Eine containerisierte Trading-Assistenz-Webapp, die mit AI-Agenten natürliche S
 
 4. **Öffne im Browser:**
    - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8000
+   - Backend API: http://localhost:8001
 
 ## 📁 Projektstruktur
 

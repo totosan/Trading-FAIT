@@ -5,6 +5,7 @@ Real-time communication between frontend and agent team
 
 import asyncio
 import json
+import re
 import uuid
 from datetime import datetime
 from typing import Any
@@ -16,6 +17,7 @@ from ..core.config import get_settings
 from ..core.logging import get_logger
 from ..agents.team import get_trading_team, TradingAgentTeam
 from ..services.market_data import get_market_data_service
+from ..services.conversation import get_conversation_manager, ConversationContext
 
 logger = get_logger(__name__)
 
@@ -87,22 +89,74 @@ async def handle_query(
     query: str,
     session_id: str | None = None,
 ):
-    """Handle a trading query from the client"""
+    """
+    Handle a trading query from the client.
+    
+    Supports follow-up conversations with context management:
+    - Maintains conversation history per session
+    - Detects ambiguous references ("hierzu", "dazu") 
+    - Handles quick price queries without full agent discussion
+    """
     
     session_id = session_id or str(uuid.uuid4())
+    
+    # Get conversation context
+    conv_manager = get_conversation_manager()
+    context = conv_manager.get_or_create(session_id)
+    
+    # Get the trading team for symbol extraction
+    team = get_trading_team()
+    
+    # Extract symbols from current query
+    current_symbols = team._extract_symbols(query)
+    
+    # Check if this is a follow-up reference without explicit symbol
+    needs_clarification, candidates = context.needs_clarification(query)
+    
+    if needs_clarification and not current_symbols:
+        # Ask for clarification
+        clarification_msg = f"Gerne! Meinst du {', '.join(candidates[:-1])} oder {candidates[-1]}? Oder alle zusammen?"
+        if len(candidates) == 2:
+            clarification_msg = f"Gerne! Meinst du {candidates[0]} oder {candidates[1]}? Oder beide?"
+        
+        await manager.send_message(client_id, {
+            "type": "clarification_needed",
+            "message": clarification_msg,
+            "candidates": candidates,
+            "session_id": session_id,
+            "timestamp": datetime.utcnow().isoformat(),
+        })
+        return
+    
+    # If no explicit symbol but context has symbols, fallback to last discussed symbol
+    if not current_symbols and context.active_symbols:
+        # Check for patterns like "..und MSFT?" - implied same type of query
+        if query.strip().lower().startswith("..und") or query.strip().lower().startswith("und "):
+            # continue (could contain new symbol after und)
+            pass
+        else:
+            # Default: reuse last symbol from context for follow-up questions
+            current_symbols = context.get_last_symbols(1)
+    
+    # Detect if this is a quick price query
+    is_price_query = _is_quick_price_query(query)
+    is_analysis_request = _is_analysis_request(query)
+    
+    # Quick price query - bypass full agent discussion
+    if is_price_query and current_symbols:
+        await _handle_quick_price_query(client_id, session_id, query, current_symbols, context)
+        return
     
     # Notify query start
     await manager.send_message(client_id, {
         "type": "query_start",
         "session_id": session_id,
         "query": query,
+        "context_symbols": context.active_symbols,
         "timestamp": datetime.utcnow().isoformat(),
     })
     
     try:
-        # Get the trading team
-        team = get_trading_team()
-        
         # Check if Azure OpenAI is configured
         settings = get_settings()
         if not settings.is_configured:
@@ -113,16 +167,44 @@ async def handle_query(
             })
             return
         
+        # Build context for the query
+        conversation_context = context.get_context_for_query(query)
+        
+        # Add user message to context
+        context.add_user_message(
+            content=query,
+            symbols=current_symbols,
+            is_price_query=is_price_query,
+            is_analysis=is_analysis_request,
+        )
+        
         # Stream agent responses
-        async for event in team.run_query(query, session_id=session_id):
+        final_content = ""
+        async for event in team.run_query(
+            query, 
+            session_id=session_id,
+            conversation_context=conversation_context,
+            symbols_override=current_symbols,
+        ):
             # Add timestamp to event
             event["timestamp"] = datetime.utcnow().isoformat()
+            
+            # Capture final content for context
+            if event.get("type") == "agent_message":
+                final_content = event.get("content", "")
             
             # Send to client
             await manager.send_message(client_id, event)
             
             # Small delay to prevent flooding
             await asyncio.sleep(0.05)
+        
+        # Add assistant response to context
+        if final_content:
+            context.add_assistant_message(
+                content=final_content,
+                symbols=current_symbols,
+            )
         
     except Exception as e:
         logger.error(f"Error handling query: {e}")
@@ -131,6 +213,106 @@ async def handle_query(
             "error": str(e),
             "session_id": session_id,
         })
+
+
+def _is_quick_price_query(query: str) -> bool:
+    """
+    Detect if query is a simple price/quote request.
+    
+    Examples:
+    - "Welchen Preis hat AAPL?"
+    - "Was kostet BTC?"
+    - "MSFT Kurs"
+    - "..und MSFT?"
+    """
+    query_lower = query.lower()
+    
+    price_patterns = [
+        r'welchen?\s+preis',
+        r'was\s+kostet',
+        r'aktueller?\s+kurs',
+        r'aktueller?\s+preis',
+        r'kurs\s+von',
+        r'preis\s+von',
+        r'^\.{2,}und\s+\w+\??$',  # "..und MSFT?"
+        r'^und\s+\w+\??$',  # "und MSFT?"
+        r'^\w{2,5}\s+kurs\??$',  # "MSFT Kurs?"
+        r'^\w{2,5}\s+preis\??$',  # "AAPL Preis?"
+        r'wie\s+steht\s+\w+',
+        r'wie\s+ist\s+der\s+kurs',
+    ]
+    
+    return any(re.search(pattern, query_lower) for pattern in price_patterns)
+
+
+def _is_analysis_request(query: str) -> bool:
+    """Detect if query requests an analysis"""
+    query_lower = query.lower()
+    
+    analysis_patterns = [
+        r'analy[sz]',
+        r'bewert',
+        r'einsch[äa]tz',
+        r'empfehl',
+        r'trade\s*idea',
+        r'handels.*empfehlung',
+        r'was\s+denkst\s+du',
+        r'wie\s+siehst\s+du',
+    ]
+    
+    return any(re.search(pattern, query_lower) for pattern in analysis_patterns)
+
+
+async def _handle_quick_price_query(
+    client_id: str,
+    session_id: str,
+    query: str,
+    symbols: list[str],
+    context: ConversationContext,
+):
+    """
+    Handle quick price queries without full agent discussion.
+    Much faster and token-efficient.
+    """
+    market_service = get_market_data_service()
+    
+    results = []
+    for symbol in symbols[:3]:  # Max 3 symbols
+        try:
+            quote = await market_service.get_quick_quote(symbol)
+            
+            if quote.get("error"):
+                results.append(f"❌ {symbol}: Daten nicht verfügbar")
+            else:
+                price = quote.get("price")
+                change = quote.get("change_24h_pct")
+                
+                if price:
+                    price_str = f"${price:,.2f}"
+                    change_str = f"({change:+.2f}%)" if change else ""
+                    results.append(f"📊 **{symbol}**: {price_str} {change_str}")
+                else:
+                    results.append(f"⚠️ {symbol}: Kein Preis verfügbar")
+                    
+        except Exception as e:
+            logger.warning(f"Quick quote failed for {symbol}: {e}")
+            results.append(f"⚠️ {symbol}: Fehler beim Abruf")
+    
+    response_text = "\n".join(results)
+    
+    # Add to context
+    context.add_user_message(query, symbols, is_price_query=True)
+    context.add_assistant_message(response_text, symbols)
+    
+    # Send response
+    await manager.send_message(client_id, {
+        "type": "quick_response",
+        "message": response_text,
+        "symbols": symbols,
+        "session_id": session_id,
+        "timestamp": datetime.utcnow().isoformat(),
+    })
+
 
 
 async def handle_quote_request(client_id: str, symbol: str):

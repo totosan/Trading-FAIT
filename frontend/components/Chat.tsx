@@ -1,14 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-
-interface ChatMessage {
-  id: string;
-  type: "user" | "system" | "agent";
-  content: string;
-  agent?: string;
-  timestamp: Date;
-}
+import { ChatMessage } from "../lib/types";
 
 interface ChatProps {
   onSendMessage: (message: string) => void;
@@ -16,6 +9,7 @@ interface ChatProps {
   isProcessing: boolean;
   messages?: ChatMessage[];
   placeholder?: string;
+  onClarificationSelect?: (symbol: string) => void;
 }
 
 export function Chat({
@@ -24,6 +18,7 @@ export function Chat({
   isProcessing,
   messages = [],
   placeholder = "Deine Frage hier eingeben... z.B. 'Analysiere BTC für Swing-Trade'",
+  onClarificationSelect,
 }: ChatProps) {
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -71,6 +66,10 @@ export function Chat({
                     ? "bg-green-600 text-white"
                     : msg.type === "agent"
                     ? "bg-slate-700 text-slate-200"
+                    : msg.type === "quick_response"
+                    ? "bg-blue-900/50 text-blue-100 border border-blue-700"
+                    : msg.type === "clarification"
+                    ? "bg-amber-900/50 text-amber-100 border border-amber-700"
                     : "bg-slate-800 text-slate-400"
                 }`}
               >
@@ -79,7 +78,39 @@ export function Chat({
                     {msg.agent}
                   </span>
                 )}
-                <p className="text-sm">{msg.content}</p>
+                {msg.type === "quick_response" && (
+                  <span className="text-xs text-blue-400 block mb-1">
+                    ⚡ Schnelle Antwort
+                  </span>
+                )}
+                {msg.type === "clarification" && (
+                  <span className="text-xs text-amber-400 block mb-1">
+                    ❓ Rückfrage
+                  </span>
+                )}
+                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                
+                {/* Clarification buttons */}
+                {msg.type === "clarification" && msg.candidates && msg.candidates.length > 0 && onClarificationSelect && (
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    {msg.candidates.map((symbol) => (
+                      <button
+                        key={symbol}
+                        onClick={() => onClarificationSelect(symbol)}
+                        className="text-xs px-2 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded transition-colors"
+                      >
+                        {symbol}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => onClarificationSelect("alle")}
+                      className="text-xs px-2 py-1 bg-green-600 hover:bg-green-500 text-white rounded transition-colors"
+                    >
+                      Alle
+                    </button>
+                  </div>
+                )}
+                
                 <span className="text-xs opacity-50 mt-1 block">
                   {msg.timestamp.toLocaleTimeString("de-DE", {
                     hour: "2-digit",
