@@ -23,13 +23,13 @@ class Settings(BaseSettings):
     # =====================
     # Azure OpenAI Settings
     # =====================
-    azure_openai_endpoint: str = Field(
-        ...,
+    azure_openai_endpoint: Optional[str] = Field(
+        default=None,
         description="Azure OpenAI endpoint URL",
         examples=["https://your-resource.openai.azure.com/"],
     )
-    azure_openai_api_key: str = Field(
-        ...,
+    azure_openai_api_key: Optional[str] = Field(
+        default=None,
         description="Azure OpenAI API key",
     )
     azure_openai_deployment: str = Field(
