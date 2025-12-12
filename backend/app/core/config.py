@@ -4,17 +4,35 @@ Pydantic Settings for Azure OpenAI and application configuration
 """
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Find .env file - check multiple locations
+def _find_env_file() -> str:
+    """Find .env file in project root or backend directory"""
+    # Possible locations for .env
+    locations = [
+        Path(__file__).parent.parent.parent.parent / ".env",  # /workspaces/Trading-FAIT/.env
+        Path(__file__).parent.parent.parent / ".env",  # /workspaces/Trading-FAIT/backend/.env
+        Path.cwd() / ".env",  # Current working directory
+        Path.cwd().parent / ".env",  # Parent of CWD
+    ]
+    
+    for loc in locations:
+        if loc.exists():
+            return str(loc.resolve())
+    
+    return ".env"  # Fallback
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_find_env_file(),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
